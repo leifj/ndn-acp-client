@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<results>
+	<status code="ok"/>
+	<foo>
+		<principal principal-id="2006282569" account-id="624520" type="user"
+			has-children="false" is-primary="false" is-hidden="false">
+			<name>jazz doe</name>
+			<login>jazzdoe@example.com</login>
+			<email>jazzdoe@newcompany.com</email>
+		</principal>
+	</foo>
+</results>
+
