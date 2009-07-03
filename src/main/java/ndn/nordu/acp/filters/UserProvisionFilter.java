@@ -106,7 +106,7 @@ public class UserProvisionFilter implements Filter {
 			headerMap.put("last-name",parseHeaderConfig(filterConfig,"last-name"));
 			headerMap.put("email",parseHeaderConfig(filterConfig, "email"));
 			
-			clientPool = new StackObjectPool(new ACPClientFactory(url,user,pass,httpClient));
+			clientPool = new StackObjectPool(new ACPClientFactory(url,user,pass,httpClient,ttl));
 		} catch (Exception ex) {
 			throw new ServletException(ex);
 		}

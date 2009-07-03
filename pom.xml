@@ -13,6 +13,14 @@
       <timezone>CEST</timezone>
     </developer>
   </developers>
+  <scm>
+                <connection>
+                        scm:git:git://git.mnt.se/ndn-acp-client.git
+                </connection>
+                <developerConnection>
+                        scm:git:ssh://git@code.mnt.se/ndn-acp-client.git
+                </developerConnection>
+        </scm>
   <build>
     <defaultGoal>install</defaultGoal>
     <plugins>
@@ -63,4 +71,18 @@
       <version>3.1</version>
     </dependency>
   </dependencies>
+  <distributionManagement>
+                <repository>
+                        <id>ssh-repository</id>
+                        <url>
+                                scpexe://code.mnt.se/var/www/code.mnt.se/maven2
+                        </url>
+                </repository>
+                <site>
+                        <id>website</id>
+                        <url>
+                                scpexe://code.mnt.se/var/www/code.mnt.se/site/ndn-acp-client
+                        </url>
+                </site>
+        </distributionManagement>
 </project>
