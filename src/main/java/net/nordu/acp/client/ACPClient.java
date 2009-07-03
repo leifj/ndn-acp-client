@@ -81,13 +81,76 @@ public class ACPClient {
 					url.append(e.getKey()).append("=").append(e.getValue());
 				}
 			}
-			
+			System.err.println("httpClient="+httpClient);
+			System.err.println("url="+url);
 			ACPResult r = ACPResult.parse(httpClient.GET(url.toString(),getCookie()));
 			log.info(r);
+			System.err.println(r);
 			return r;
 		} catch (Exception ex) {
 			throw new ACPException(ex);
 		}
+	}
+
+	public ACPPrincipal findOrCreatePrincipal(String key, String value, String type, Map<String,String> properties) throws ACPException {
+		Map<String, String> request = new HashMap<String, String>();
+		request.put("filter-"+key,value);
+		request.put("filter-type", type);
+		ACPResult userResult = request("principal-list", request);
+		ACPPrincipal principal = userResult.getPrincipal();
+		if (userResult.isError()) {
+			// unless this is a "normal" error of no-data throw an exception 
+			if (!userResult.getStatusCode().equals("no-data"))
+				throw userResult.getException();
+		} else if (principal != null) {
+			properties.put("principal-id", principal.getPrincipalId());
+		}
+		
+		// remove null or empty values - it really confuses ACP
+		for (Map.Entry<String, String> e : properties.entrySet()) {
+			if (e.getValue() == null || e.getValue().length() == 0)
+				properties.remove(e.getKey());
+		}
+		
+		ACPResult updateResult = request("principal-update", properties);
+		if (updateResult.isError()) {
+			throw updateResult.getException();
+		}
+		
+		ACPPrincipal returnPrincipal = updateResult.getPrincipal();
+		if (returnPrincipal == null)
+			returnPrincipal = principal;
+		
+		return returnPrincipal;
+	}
+	
+	public ACPPrincipal findBuiltIn(String type) throws ACPException {
+		Map<String, String> request = new HashMap<String, String>();
+		request.put("filter-type", type);
+		ACPResult userResult = request("principal-list", request);
+		ACPPrincipal principal = userResult.getPrincipal();
+		if (userResult.isError())
+			throw userResult.getException();
+		
+		return principal;
+	}
+	
+	public void addRemoveMember(String principalId, String groupId, boolean isMember) throws ACPException {
+		Map<String, String> request = new HashMap<String, String>();
+		request.put("group-id",groupId);
+		request.put("principal-id", principalId);
+		request.put("is-member",Boolean.toString(isMember));
+		ACPResult userResult = request("group-membership-update", request);
+		if (userResult.isError())
+			throw userResult.getException();
+	}
+	
+	public void addMember(String principalId, String groupId) throws ACPException {
+		addRemoveMember(principalId, groupId, true);
+	}
+	
+	public void removeMember(String principalId, String groupId) throws ACPException {
+		addRemoveMember(principalId, groupId, false);
 	}
 	
 }

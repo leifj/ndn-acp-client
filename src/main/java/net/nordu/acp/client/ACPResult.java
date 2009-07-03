@@ -17,6 +17,7 @@ import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.SAXException;
@@ -86,6 +87,18 @@ public class ACPResult {
 		}
 	}
 	
+	public String getStatusCode() throws ACPException {
+		Element status = getStatusElement();
+		if (status == null)
+			throw new ACPException("Invalid status element");
+		
+		String code = status.getAttribute("code");
+		if (code == null)
+			throw new ACPException("Invalid status element");
+		
+		return code;
+	}
+	
 	public boolean isError() {
 		Element status = getStatusElement();
 		if (status == null)
@@ -93,7 +106,8 @@ public class ACPResult {
 		
 		return status.getAttribute("code").equals("ok") == false;
 	}
-	
+
+	//TODO improve this message to something human-readable
 	public String getError() {
 		Element status = getStatusElement();
 		if (status == null)
@@ -115,6 +129,10 @@ public class ACPResult {
 		return buf.toString();
 	}
 	
+	public ACPException getException() {
+		return new ACPException(getError());
+	}
+	
 	private Element getStatusElement() {
 		if (status == null) {
 			NodeList elts = document.getElementsByTagName("status");
@@ -126,13 +144,17 @@ public class ACPResult {
 		return status;
 	}
 	
-	private String getChildValue(Element e, String n) throws ACPException {
+	private String getChildValue(Element e, String n, boolean must) throws ACPException {
 		NodeList elts = document.getElementsByTagName(n);
-		if (elts == null || elts.getLength() == 0)
-			throw new ACPException("No "+n+" element");
-		
-		Element ce = (Element)elts.item(0);
-		return ce.getTextContent();
+		if ((elts == null || elts.getLength() == 0)) {
+			if (must)
+				throw new ACPException("No "+n+" element");
+			else
+				return null;
+		}
+		Node ce = elts.item(0);
+		Node txtn = ce.getFirstChild();
+		return txtn == null ? null : txtn.getNodeValue();
 	}
 	
 	public ACPPrincipal getPrincipal() throws ACPException {
@@ -140,16 +162,17 @@ public class ACPResult {
 		
 		NodeList elts = document.getElementsByTagName("principal");
 		if (elts == null || elts.getLength() == 0)
-			throw new ACPException("No principal element");
+			return null;
 		
 		Element principalElement = (Element)elts.item(0);
 		if (principalElement != null) {
 			p.setPrincipalId(principalElement.getAttribute("principal-id"));
 			p.setAccountId(principalElement.getAttribute("account-id"));
 			p.setType(principalElement.getAttribute("type"));
-			p.setName(getChildValue(principalElement,"name"));
-			p.setLogin(getChildValue(principalElement, "login"));
-			p.setEmail(getChildValue(principalElement, "email"));
+			p.setName(getChildValue(principalElement,"name",false));
+			p.setLogin(getChildValue(principalElement, "login",true));
+			p.setEmail(getChildValue(principalElement, "email",false));
+			p.setDescription(getChildValue(principalElement, "description", false));
 		}
 		
 		return p;

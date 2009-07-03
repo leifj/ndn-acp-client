@@ -14,13 +14,9 @@
     </developer>
   </developers>
   <scm>
-                <connection>
-                        scm:git:git://git.mnt.se/ndn-acp-client.git
-                </connection>
-                <developerConnection>
-                        scm:git:ssh://git@code.mnt.se/ndn-acp-client.git
-                </developerConnection>
-        </scm>
+    <connection>scm:git:git://git.mnt.se/ndn-acp-client.git</connection>
+    <developerConnection>scm:git:ssh://git@code.mnt.se/ndn-acp-client.git</developerConnection>
+  </scm>
   <build>
     <defaultGoal>install</defaultGoal>
     <plugins>
@@ -34,8 +30,42 @@
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
       </plugin>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>make-full-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attached</goal>
+            </goals>
+            <configuration>
+               <descriptors>
+                  <descriptor>src/main/assembly/src.xml</descriptor>
+               </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>local</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+    </profile>
+    <profile>
+      <id>testing</id>
+      <activation>
+        <property>
+          <name>env</name>
+          <value>dev</value>
+        </property>
+      </activation>
+    </profile>
+  </profiles>
   <dependencies>
     <dependency>
       <groupId>commons-logging</groupId>
@@ -68,21 +98,23 @@
     <dependency>
       <groupId>commons-httpclient</groupId>
       <artifactId>commons-httpclient</artifactId>
-      <version>3.1</version>
+      <version>2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty</artifactId>
+      <version>6.1.5</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
   <distributionManagement>
-                <repository>
-                        <id>ssh-repository</id>
-                        <url>
-                                scpexe://code.mnt.se/var/www/code.mnt.se/maven2
-                        </url>
-                </repository>
-                <site>
-                        <id>website</id>
-                        <url>
-                                scpexe://code.mnt.se/var/www/code.mnt.se/site/ndn-acp-client
-                        </url>
-                </site>
-        </distributionManagement>
+    <repository>
+      <id>ssh-repository</id>
+      <url>scpexe://code.mnt.se/var/www/code.mnt.se/maven2</url>
+    </repository>
+    <site>
+      <id>website</id>
+      <url>scpexe://code.mnt.se/var/www/code.mnt.se/site/ndn-acp-client</url>
+    </site>
+  </distributionManagement>
 </project>

@@ -8,6 +8,7 @@ public class ACPPrincipal {
 	private String name;
 	private String login;
 	private String email;
+	private String description;
 	
 	public String getPrincipalId() {
 		return principalId;
@@ -45,4 +46,12 @@ public class ACPPrincipal {
 	public void setEmail(String email) {
 		this.email = email;
 	}	
+	
+	public String getDescription() {
+		return description;
+	}
+	
+	public void setDescription(String description) {
+		this.description = description;
+	}
 }
