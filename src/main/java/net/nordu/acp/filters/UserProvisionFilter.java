@@ -86,22 +86,22 @@ public class UserProvisionFilter implements Filter {
 			try {
 				
 				if (!uid.contains("@")) {
-					resp.sendRedirect("http://connect-test.sunet.se/errors/missing-attribute.php?attribute=eduPersonPrincipalName");
+					resp.sendRedirect("https://connect-test.sunet.se/errors/missing-attribute.php?attribute=eduPersonPrincipalName");
 					return;
 				}
 				
 				if (!hasProperty(req,"first-name")) {
-					resp.sendRedirect("http://connect-test.sunet.se/errors/missing-attribute.php?attribute=givenName");
+					resp.sendRedirect("https://connect-test.sunet.se/errors/missing-attribute.php?attribute=givenName");
 					return;
 				}
 				
 				if (!hasProperty(req,"last-name")) {
-					resp.sendRedirect("http://connect-test.sunet.se/errors/missing-attribute.php?attribute=sn");
+					resp.sendRedirect("https://connect-test.sunet.se/errors/missing-attribute.php?attribute=sn");
 					return;
 				}
 				
 				if (!hasProperty(req,"mail")) {
-					resp.sendRedirect("http://connect-test.sunet.se/errors/missing-attribute.php?attribute=mail");
+					resp.sendRedirect("https://connect-test.sunet.se/errors/missing-attribute.php?attribute=mail");
 					return;
 				}
 				
