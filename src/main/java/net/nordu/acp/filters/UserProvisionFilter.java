@@ -50,7 +50,7 @@ public class UserProvisionFilter implements Filter {
 		
 		for (String hn : headerNames) {
 			String value = req.getHeader(hn);
-			if (value != null)
+			if (!isNullOrEmpty(value))
 				return value;
 		}
 		
@@ -59,21 +59,27 @@ public class UserProvisionFilter implements Filter {
 	
 	public boolean hasProperty(HttpServletRequest req, String name) {
 		String v = getProperty(req, name);
-		return v != null && v.length() > 0;
+		return !isNullOrEmpty(v);
 	}
 	
 	private boolean isMemberOrEmployee(String[] affiliations) {
 		for (String affiliation : affiliations) {
-			String parts[] = affiliation.split("@");
-			System.err.println("aff: "+parts[0]+"@"+parts[1]);
-			System.err.println("aff: "+parts[0]);
-			if (parts[0].equals("member"))
+			if (affiliation.contains("@")) {
+			   String parts[] = affiliation.split("@");
+			   System.err.println("aff: "+parts[0]+"@"+parts[1]);
+			   System.err.println("aff: "+parts[0]);
+			   if (parts[0].equalsIgnoreCase("member"))
 				return true;
-			if (parts[0].equals("employee"))
+			   if (parts[0].equalsIgnoreCase("employee"))
 				return true;
+                        }
 		}
 		return false;
 	}
+
+	private boolean isNullOrEmpty(String x) {
+		return x == null || x.length() == 0 || x.equals("(null)");
+ 	}
 	
 	public void doFilter(ServletRequest request, ServletResponse response,
 			FilterChain chain) throws IOException, ServletException {
@@ -81,10 +87,13 @@ public class UserProvisionFilter implements Filter {
 		final HttpServletRequest req = (HttpServletRequest)request;
 		final HttpServletResponse resp = (HttpServletResponse)response;
 		final String uid = req.getHeader("X_REMOTE_USER");
-		if (req.getRequestURI().contains("/system/login") && uid != null && uid.length() > 0) {
+		System.err.println("request uri="+req.getRequestURI());
+		System.err.println("uid="+uid);
+		if (req.getRequestURI().contains("/system/login") && !isNullOrEmpty(uid)) {
 			ACPClient client = null;
 			try {
-				
+				System.err.println("in doFilter");
+			 	
 				if (!uid.contains("@")) {
 					resp.sendRedirect("https://connect-test.sunet.se/errors/missing-attribute.php?attribute=eduPersonPrincipalName");
 					return;
@@ -99,11 +108,12 @@ public class UserProvisionFilter implements Filter {
 					resp.sendRedirect("https://connect-test.sunet.se/errors/missing-attribute.php?attribute=sn");
 					return;
 				}
-				
-				if (!hasProperty(req,"mail")) {
+				/*	
+				if (!hasProperty(req,"email")) {
 					resp.sendRedirect("https://connect-test.sunet.se/errors/missing-attribute.php?attribute=mail");
 					return;
 				}
+				*/
 				
 				client = (ACPClient)clientPool.borrowObject();
 				
@@ -122,7 +132,8 @@ public class UserProvisionFilter implements Filter {
 				String affiliations = getProperty(req,"affiliation");
 				System.err.println("affiliation="+affiliations);
 				
-				if (isMemberOrEmployee(affiliations.split(";"))) {
+				if (!isNullOrEmpty(affiliations) && isMemberOrEmployee(affiliations.split(";"))) {
+					System.err.println("add live-admins");
 					ACPPrincipal liveAdmins = client.findBuiltIn("live-admins");
 					if (liveAdmins != null)
 						client.addMember(user.getPrincipalId(), liveAdmins.getPrincipalId());
@@ -130,6 +141,7 @@ public class UserProvisionFilter implements Filter {
 					if (seminarAdmins != null)
 						client.addMember(user.getPrincipalId(), seminarAdmins.getPrincipalId());
 				} else {
+                                        System.err.println("remove live-admins");
 					ACPPrincipal liveAdmins = client.findBuiltIn("live-admins");
 					if (liveAdmins != null)
 						client.removeMember(user.getPrincipalId(), liveAdmins.getPrincipalId());

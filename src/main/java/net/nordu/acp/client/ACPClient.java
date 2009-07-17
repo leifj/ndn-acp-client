@@ -77,8 +77,10 @@ public class ACPClient {
 			url.append(apiUrl).append("?").append("action=").append(action);
 			if (p != null && p.size() > 0) {
 				for (Map.Entry<String, String> e : p.entrySet()) {
-					url.append("&"); 
-					url.append(e.getKey()).append("=").append(e.getValue());
+                                        if (e.getValue() != null && e.getValue().length() > 0) {
+					   url.append("&");
+					   url.append(e.getKey()).append("=").append(e.getValue());
+                                        }
 				}
 			}
 			System.err.println("httpClient="+httpClient);
@@ -107,10 +109,12 @@ public class ACPClient {
 		}
 		
 		// remove null or empty values - it really confuses ACP
+		/*
 		for (Map.Entry<String, String> e : properties.entrySet()) {
 			if (e.getValue() == null || e.getValue().length() == 0)
 				properties.remove(e.getKey());
 		}
+		*/
 		
 		ACPResult updateResult = request("principal-update", properties);
 		if (updateResult.isError()) {
