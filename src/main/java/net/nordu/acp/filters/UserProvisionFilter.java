@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.net.URLEncoder;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -43,7 +44,16 @@ public class UserProvisionFilter implements Filter {
 		return clientPool;
 	}
 
-	public String getProperty(HttpServletRequest req, String name) {
+        private String firstValueOf(String v) throws ACPException {
+                try {
+        	   String[] va = v.split(";");
+	           return URLEncoder.encode(va[0],"UTF8");
+                } catch (java.io.UnsupportedEncodingException ex) {
+		   throw new ACPException(ex);
+                }
+        }
+
+	public String getProperty(HttpServletRequest req, String name) throws ACPException {
 		List<String> headerNames = headerMap.get(name);
 		if (headerNames == null)
 			return req.getHeader(name);
@@ -51,13 +61,13 @@ public class UserProvisionFilter implements Filter {
 		for (String hn : headerNames) {
 			String value = req.getHeader(hn);
 			if (!isNullOrEmpty(value))
-				return value;
+				return firstValueOf(value);
 		}
 		
 		return null;
 	}
 	
-	public boolean hasProperty(HttpServletRequest req, String name) {
+	public boolean hasProperty(HttpServletRequest req, String name) throws ACPException {
 		String v = getProperty(req, name);
 		return !isNullOrEmpty(v);
 	}
@@ -72,6 +82,8 @@ public class UserProvisionFilter implements Filter {
 				return true;
 			   if (parts[0].equalsIgnoreCase("employee"))
 				return true;
+                           if (parts[0].equalsIgnoreCase("staff"))
+                                return true;
                         }
 		}
 		return false;
