@@ -73,20 +73,26 @@ public class UserProvisionFilter implements Filter {
 	}
 	
 	private boolean isMemberOrEmployee(String[] affiliations) {
+                boolean student = false;
+                boolean member = false;
+                boolean staff = false;
+                boolean employee = false;
 		for (String affiliation : affiliations) {
 			if (affiliation.contains("@")) {
 			   String parts[] = affiliation.split("@");
 			   System.err.println("aff: "+parts[0]+"@"+parts[1]);
 			   System.err.println("aff: "+parts[0]);
 			   if (parts[0].equalsIgnoreCase("member"))
-				return true;
-			   if (parts[0].equalsIgnoreCase("employee"))
-				return true;
-                           if (parts[0].equalsIgnoreCase("staff"))
-                                return true;
+                              member = true;
+			   else if (parts[0].equalsIgnoreCase("employee"))
+			      employee = true;
+                           else if (parts[0].equalsIgnoreCase("staff"))
+                               staff = true;
+                           else if (parts[0].equalsIgnoreCase("student"))
+                               student = true;
                         }
 		}
-		return false;
+		return (member || staff || employee) && !student;
 	}
 
 	private boolean isNullOrEmpty(String x) {
@@ -143,8 +149,10 @@ public class UserProvisionFilter implements Filter {
 				System.err.println("principal="+user.getPrincipalId());
 				String affiliations = getProperty(req,"affiliation");
 				System.err.println("affiliation="+affiliations);
-				
-				if (!isNullOrEmpty(affiliations) && isMemberOrEmployee(affiliations.split(";"))) {
+			 
+                                if (!isNullOrEmpty(affiliations)) {	
+                                   String[] a = affiliations.split(";");
+				   if (isMemberOrEmployee(a)) {
 					System.err.println("add live-admins");
 					ACPPrincipal liveAdmins = client.findBuiltIn("live-admins");
 					if (liveAdmins != null)
@@ -152,7 +160,7 @@ public class UserProvisionFilter implements Filter {
 					ACPPrincipal seminarAdmins = client.findBuiltIn("seminar-admins");
 					if (seminarAdmins != null)
 						client.addMember(user.getPrincipalId(), seminarAdmins.getPrincipalId());
-				} else {
+				   } else {
                                         System.err.println("remove live-admins");
 					ACPPrincipal liveAdmins = client.findBuiltIn("live-admins");
 					if (liveAdmins != null)
@@ -160,7 +168,8 @@ public class UserProvisionFilter implements Filter {
 					ACPPrincipal seminarAdmins = client.findBuiltIn("seminar-admins");
 					if (seminarAdmins != null)
 						client.removeMember(user.getPrincipalId(), seminarAdmins.getPrincipalId());
-				}
+				   }
+                                }
 			} catch (Exception ex) {
 				try {
 					clientPool.invalidateObject(client);
