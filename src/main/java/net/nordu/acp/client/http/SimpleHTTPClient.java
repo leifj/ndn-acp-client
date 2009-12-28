@@ -4,10 +4,10 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 
+import net.nordu.acp.client.ACPException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import net.nordu.acp.client.ACPException;
 
 public class SimpleHTTPClient implements ACPHTTPClient {
 	
@@ -27,6 +27,15 @@ public class SimpleHTTPClient implements ACPHTTPClient {
 			if (log.isDebugEnabled())
 				log.debug(url+" ["+cookie+"]");
 			return c.getInputStream();
+		} catch (Exception ex) {
+			throw new ACPException(ex);
+		}
+	}
+
+	public InputStream POST(String url, String content)
+			throws ACPException {
+		try {
+			throw new IllegalArgumentException("Not implemented");
 		} catch (Exception ex) {
 			throw new ACPException(ex);
 		}

@@ -9,13 +9,13 @@
       <unpack>true</unpack>
       <scope>runtime</scope>
       <excludes>
-                       <exclude>commons-httpclient:commons-httpclient</exclude>
-                    </excludes>
+          <exclude>commons-httpclient:commons-httpclient</exclude>
+      </excludes>
     </dependencySet>
   </dependencySets>
-  <fileSets>
+  <!-- fileSets>
     <fileSet>
       <directory>${project.build.outputDirectory}</directory>
     </fileSet>
-  </fileSets>
+  </fileSets -->
 </assembly>
