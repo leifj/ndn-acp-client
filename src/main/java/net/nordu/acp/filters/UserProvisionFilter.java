@@ -1,7 +1,6 @@
 package net.nordu.acp.filters;
 
 import java.io.IOException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -80,7 +79,7 @@ public class UserProvisionFilter implements Filter {
 					student = true;
 			}
 		}
-		return (member || staff || employee) && !student;
+		return employee || staff || (member && !student);
 	}
 	
 	private String domain(String[] affiliations) {
@@ -163,6 +162,31 @@ public class UserProvisionFilter implements Filter {
 							}
 						});
 
+				String unscopedAffiliations = getProperty(req,"unscoped_affiliation");
+				if (!isNullOrEmpty(unscopedAffiliations)) {
+					String [] a = unscopedAffiliations.split(";");
+					for (final String affiliation : new String[] { "student" , "employee", "member" }) {
+						ACPPrincipal group = client.findOrCreatePrincipal("name",affiliation,
+								"group", new HashMap<String, String>() {
+									/**
+									 * 
+									 */
+									private static final long serialVersionUID = 1L;
+
+									{
+										put("type", "group");
+										put("has-children", "1");
+										put("name",affiliation);
+									}
+								});
+						if (isPresent(a, affiliation)) {
+							client.addMember(user.getPrincipalId(), group.getPrincipalId());
+						} else {
+							client.removeMember(user.getPrincipalId(), group.getPrincipalId());
+						}
+					}
+				}
+				
 				System.err.println("principal=" + user.getPrincipalId());
 				String affiliations = getProperty(req, "affiliation");
 				System.err.println("affiliation=" + affiliations);
@@ -217,6 +241,14 @@ public class UserProvisionFilter implements Filter {
 		}
 
 		chain.doFilter(request, response);
+	}
+
+	private boolean isPresent(String[] a, String affiliation) {
+		for (final String af : a) {
+			if (af.equalsIgnoreCase(affiliation))
+				return true;
+		}
+		return false;
 	}
 
 	private List<String> parseHeaderConfig(FilterConfig filterConfig, String pn) {
