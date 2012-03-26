@@ -165,7 +165,7 @@ public class UserProvisionFilter implements Filter {
 				String unscopedAffiliations = getProperty(req,"unscoped_affiliation");
 				if (!isNullOrEmpty(unscopedAffiliations)) {
 					String [] a = unscopedAffiliations.split(";");
-					for (final String affiliation : new String[] { "student" , "employee", "member" }) {
+					for (final String affiliation : new String[] { "student" , "employee", "member", "affiliate", "alumn" }) {
 						ACPPrincipal group = client.findOrCreatePrincipal("name",affiliation,
 								"group", new HashMap<String, String>() {
 									/**
@@ -212,7 +212,7 @@ public class UserProvisionFilter implements Filter {
 					}
 					
 					String domain = domain(a);
-					for (String affiliation : new String[] { "student" , "employee", "member" }) {
+					for (String affiliation : new String[] { "student" , "employee", "member", "affiliate", "alumn" }) {
 						final String name = affiliation+"@"+domain;
 						ACPPrincipal group = client.findOrCreatePrincipal("name",name,
 								"group", new HashMap<String, String>() {
