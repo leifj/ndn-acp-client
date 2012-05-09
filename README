@@ -1,0 +1,109 @@
+This is a java client for the Adobe Connect API and also a servlet filter that you can
+deploy in your Adobe Connect installation to enable auto-provisioning of users and when
+combined with an external authentication proxy (eg Shiboleth) that provides attributes
+as headers, gives you federation-integration for your Connect deployment.
+
+Here is how to install this:
+
+1. Compile into a jar-file and drop into appserv\web\WEB-INF\lib
+
+2. Create an "api" user with as an administrator. This must be done
+before you do the rest because you might lock yourself out of the 
+admin interface. Typically you do this right after you install AC.
+We'll assume you gave this user the id api-user@example.com below.
+Also note that you probably want to turn off using email-addresses
+as user identifiers in the admin UI at this point too. The api 
+user id and password goes in the web.xml below.
+
+3. Turn on header authentication (read about this in your AC docs)
+
+2. Add something like this to your web.xml:
+
+  <filter>
+     <filter-name>UserProvisionFilter</filter-name>
+     <filter-class>net.nordu.acp.filters.UserProvisionFilter</filter-class>
+     <init-param>
+        <param-name>acp.url</param-name>
+        <param-value>http://localhost:8443/api/xml</param-value>
+     </init-param>
+     <init-param>
+        <param-name>acp.http-client</param-name>
+        <param-value>net.nordu.acp.client.http.CommonsHTTPClient</param-value>
+     </init-param>
+     <init-param>
+        <param-name>acp.user</param-name>
+        <param-value>api-user@example.com</param-value>
+     </init-param>
+     <init-param>
+        <param-name>acp.password</param-name>
+        <param-value>secret</param-value>
+     </init-param>
+     <init-param>
+        <param-name>acp.session-ttl</param-name>
+        <param-value>30</param-value>
+     </init-param>
+     <init-param>
+        <param-name>acp.header-map.first-name</param-name>
+        <param-value>givenName</param-value>
+     </init-param>
+     <init-param>
+        <param-name>acp.header-map.last-name</param-name>
+        <param-value>sn</param-value>
+     </init-param>
+     <init-param>
+        <param-name>acp.header-map.email</param-name>
+        <param-value>mail</param-value>
+     </init-param>
+     <init-param>
+        <param-name>acp.header-map.affiliation</param-name>
+        <param-value>affiliation</param-value>
+     </init-param>
+  </filter>
+   <filter-mapping>
+     <filter-name>UserProvisionFilter</filter-name>
+     <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+4. Setup your apache proxy with Shibboleth. We use something like the following
+configuration at NORDUnet. I've left out stuff that only touches error handling
+and logout - you'll figure it out... We use balancer-manager to spread load 
+across our cluster.
+
+ProxyPass /balancer-manager !
+ProxyPass /Shibboleth.sso !
+ProxyPass /shibboleth-sp !
+
+ProxyPass / balancer://connect/ stickysession=BREEZESESSION|session
+ProxyPassReverse / balancer://connect/
+ProxyPreserveHost On
+<Proxy balancer://connect>
+   BalancerMember http://server1.example.com:8443 route=server1 loadfactor=50
+   BalancerMember http://server2.example.com:8443 route=server2 loadfactor=50
+   Order deny,allow
+   Allow from all
+</Proxy>
+
+<LocationMatch "^/(system/login|admin)$">
+   AuthType shibboleth
+   ShibRequireSession On
+   require valid-user
+   RequestHeader set X_REMOTE_USER %{eppn}e
+   RequestHeader set EPPN %{eppn}e
+   RequestHeader set GIVENNAME %{givenName}e
+   RequestHeader set SN %{sn}e
+   RequestHeader set MAIL %{mail}e
+   RequestHeader set AFFILIATION %{affiliation}e
+</LocationMatch>
+<LocationMatch "^/system/login-">
+   AuthType shibboleth
+   require shibboleth
+   ShibRequireSession Off
+   RequestHeader set X_REMOTE_USER %{eppn}e
+   RequestHeader set EPPN %{eppn}e
+   RequestHeader set GIVENNAME %{givenName}e
+   RequestHeader set SN %{sn}e
+   RequestHeader set MAIL %{mail}e
+   RequestHeader set AFFILIATION %{affiliation}e
+</LocationMatch>
+
+5. Restart everything.
