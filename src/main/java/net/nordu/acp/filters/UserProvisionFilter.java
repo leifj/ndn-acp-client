@@ -164,6 +164,7 @@ public class UserProvisionFilter implements Filter {
 
 				String unscopedAffiliations = getProperty(req,"unscoped_affiliation");
 				if (!isNullOrEmpty(unscopedAffiliations)) {
+                                        String eppn_domain = domain(uid);
 					String [] a = unscopedAffiliations.split(";");
 					for (final String affiliation : new String[] { "student" , "employee", "member", "affiliate", "alumn" }) {
 						ACPPrincipal group = client.findOrCreatePrincipal("name",affiliation,
@@ -184,6 +185,26 @@ public class UserProvisionFilter implements Filter {
 						} else {
 							client.removeMember(user.getPrincipalId(), group.getPrincipalId());
 						}
+
+						String fake_scope_affiliation = affiliation + "@" + eppn_domain;
+                                                ACPPrincipal group_scoped = client.findOrCreatePrincipal("name",fake_scope_affiliation,
+                                                                "group", new HashMap<String, String>() {
+                                                                        /**
+                                                                         *
+                                                                         */
+                                                                        private static final long serialVersionUID = 1L;
+
+                                                                        {
+                                                                                put("type", "group");
+                                                                                put("has-children", "1");
+                                                                                put("name",fake_scope_affiliation);
+                                                                        }
+                                                                });
+                                                if (isPresent(a, affiliation)) {
+                                                        client.addMember(user.getPrincipalId(), group_scoped.getPrincipalId());
+                                                } else {
+                                                        client.removeMember(user.getPrincipalId(), group_scoped.getPrincipalId());
+                                                }
 					}
 				}
 				
@@ -194,21 +215,19 @@ public class UserProvisionFilter implements Filter {
 				if (!isNullOrEmpty(affiliations)) {
 					String[] a = affiliations.split(";");
 					if (isMemberOrEmployee(a)) {
-						System.err.println("add live-admins");
 						ACPPrincipal liveAdmins = client.findBuiltIn("live-admins");
 						if (liveAdmins != null)
 							client.addMember(user.getPrincipalId(), liveAdmins.getPrincipalId());
-						ACPPrincipal seminarAdmins = client.findBuiltIn("seminar-admins");
-						if (seminarAdmins != null)
-							client.addMember(user.getPrincipalId(),seminarAdmins.getPrincipalId());
+						//ACPPrincipal seminarAdmins = client.findBuiltIn("seminar-admins");
+						//if (seminarAdmins != null)
+					        //		client.addMember(user.getPrincipalId(),seminarAdmins.getPrincipalId());
 					} else {
-						System.err.println("remove live-admins");
 						ACPPrincipal liveAdmins = client.findBuiltIn("live-admins");
 						if (liveAdmins != null)
 							client.removeMember(user.getPrincipalId(),liveAdmins.getPrincipalId());
-						ACPPrincipal seminarAdmins = client.findBuiltIn("seminar-admins");
-						if (seminarAdmins != null)
-							client.removeMember(user.getPrincipalId(),seminarAdmins.getPrincipalId());
+						//ACPPrincipal seminarAdmins = client.findBuiltIn("seminar-admins");
+						//if (seminarAdmins != null)
+					        //		client.removeMember(user.getPrincipalId(),seminarAdmins.getPrincipalId());
 					}
 					
 					String domain = domain(a);
