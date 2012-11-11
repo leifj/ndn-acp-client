@@ -81,15 +81,18 @@ public class UserProvisionFilter implements Filter {
 		}
 		return employee || staff || (member && !student);
 	}
-	
-	private String domain(String[] affiliations) {
-		String a0 = affiliations[0];
-		int pos = a0.indexOf('@');
-		if (pos > 0) {
-			return a0.substring(pos+1);
-		} else {
-			return null;
-		}
+
+        private String domain(String x) {
+                int pos = x.indexOf('@');
+                if (pos > 0) {
+                        return x.substring(pos+1);
+                } else {
+                        return null;
+                }
+        }
+
+	private String domain(String[] x) {
+                return domain(x[0]);
 	}
 	
 	private boolean isAffiliation(String[] affiliations, String a) {
@@ -164,7 +167,6 @@ public class UserProvisionFilter implements Filter {
 
 				String unscopedAffiliations = getProperty(req,"unscoped_affiliation");
 				if (!isNullOrEmpty(unscopedAffiliations)) {
-                                        String eppn_domain = domain(uid);
 					String [] a = unscopedAffiliations.split(";");
 					for (final String affiliation : new String[] { "student" , "employee", "member", "affiliate", "alumn" }) {
 						ACPPrincipal group = client.findOrCreatePrincipal("name",affiliation,
@@ -186,8 +188,10 @@ public class UserProvisionFilter implements Filter {
 							client.removeMember(user.getPrincipalId(), group.getPrincipalId());
 						}
 
-						String fake_scope_affiliation = affiliation + "@" + eppn_domain;
-                                                ACPPrincipal group_scoped = client.findOrCreatePrincipal("name",fake_scope_affiliation,
+                                                String eppn_domain = domain(uid);
+                                                if (eppn_domain != null) {
+						   final String fake_scope_affiliation = affiliation + "@" + eppn_domain;
+                                                   ACPPrincipal group_scoped = client.findOrCreatePrincipal("name",fake_scope_affiliation,
                                                                 "group", new HashMap<String, String>() {
                                                                         /**
                                                                          *
@@ -200,10 +204,11 @@ public class UserProvisionFilter implements Filter {
                                                                                 put("name",fake_scope_affiliation);
                                                                         }
                                                                 });
-                                                if (isPresent(a, affiliation)) {
+                                                   if (isPresent(a, affiliation)) {
                                                         client.addMember(user.getPrincipalId(), group_scoped.getPrincipalId());
-                                                } else {
+                                                   } else {
                                                         client.removeMember(user.getPrincipalId(), group_scoped.getPrincipalId());
+                                                   }
                                                 }
 					}
 				}
