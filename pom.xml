@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>net.nordu.ndn-acp-client</groupId>
   <artifactId>ndn-acp-client</artifactId>
-  <version>1.0</version>
+  <version>1.1.2</version>
   <description>A client for the Adobe Connect XML API</description>
   <developers>
     <developer>

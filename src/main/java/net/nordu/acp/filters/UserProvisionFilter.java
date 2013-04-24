@@ -165,10 +165,25 @@ public class UserProvisionFilter implements Filter {
 							}
 						});
 
+                                final String eppn_domain = domain(uid);
+				ACPPrincipal domain_group = client.findOrCreatePrincipal("name",eppn_domain,
+                                             "group", new HashMap<String, String>() {
+                                                          /**
+                                                          *
+                                                          */
+                                                          private static final long serialVersionUID = 1L;
+                                                          {
+                                                              put("type", "group");
+                                                              put("has-children", "1");
+                                                              put("name",eppn_domain);
+                                                          }
+                                             });
+                                client.addMember(user.getPrincipalId(), domain_group.getPrincipalId());
+
 				String unscopedAffiliations = getProperty(req,"unscoped_affiliation");
 				if (!isNullOrEmpty(unscopedAffiliations)) {
 					String [] a = unscopedAffiliations.split(";");
-					for (final String affiliation : new String[] { "student" , "employee", "member", "affiliate", "alumn" }) {
+					for (final String affiliation : new String[] { "student" , "employee", "member", "affiliate", "alumn", "staff" }) {
 						ACPPrincipal group = client.findOrCreatePrincipal("name",affiliation,
 								"group", new HashMap<String, String>() {
 									/**
@@ -188,7 +203,6 @@ public class UserProvisionFilter implements Filter {
 							client.removeMember(user.getPrincipalId(), group.getPrincipalId());
 						}
 
-                                                String eppn_domain = domain(uid);
                                                 if (eppn_domain != null) {
 						   final String fake_scope_affiliation = affiliation + "@" + eppn_domain;
                                                    ACPPrincipal group_scoped = client.findOrCreatePrincipal("name",fake_scope_affiliation,
@@ -236,7 +250,7 @@ public class UserProvisionFilter implements Filter {
 					}
 					
 					String domain = domain(a);
-					for (String affiliation : new String[] { "student" , "employee", "member", "affiliate", "alumn" }) {
+					for (String affiliation : new String[] { "student" , "employee", "member", "affiliate", "alumn", "staff" }) {
 						final String name = affiliation+"@"+domain;
 						ACPPrincipal group = client.findOrCreatePrincipal("name",name,
 								"group", new HashMap<String, String>() {
