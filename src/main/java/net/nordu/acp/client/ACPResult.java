@@ -108,8 +108,12 @@ public class ACPResult {
 		return status.getAttribute("code").equals("ok") == false;
 	}
 
+        public String getError() {
+                return this.toString();
+        }
+
 	//TODO improve this message to something human-readable
-	public String getError() {
+	public String getError2() {
 		Element status = getStatusElement();
 		if (status == null)
 			return "Missing status element";

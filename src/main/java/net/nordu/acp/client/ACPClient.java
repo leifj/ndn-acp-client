@@ -16,6 +16,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import net.nordu.acp.client.http.ACPHTTPClient;
 import net.nordu.acp.client.http.SimpleHTTPClient;
+import net.nordu.acp.utils.Cache;
 
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
@@ -36,15 +37,13 @@ public class ACPClient {
 	private String session;
 	private HttpClient http;
 	private long createTime;
+        private Cache<ACPPrincipal> cache;
 	
-	protected ACPClient(String apiUrl, ACPHTTPClient httpClient) {
+	protected ACPClient(String apiUrl, ACPHTTPClient httpClient, Cache<ACPPrincipal> cache) {
 		this.apiUrl = apiUrl;
 		this.http = new HttpClient();
 		this.createTime = (new Date()).getTime();
-	}
-	
-	protected ACPClient(String apiUrl) throws ACPException {
-		this(apiUrl,new SimpleHTTPClient());
+                this.cache = cache;
 	}
 	
 	public String getSession() {
@@ -81,8 +80,8 @@ public class ACPClient {
 			throw new ACPAuthenticationException(result.getError());
 	}
 	
-	public static ACPClient open(String apiUrl, String user, String password, ACPHTTPClient httpClient) throws ACPException {
-		ACPClient client = new ACPClient(apiUrl,httpClient);
+	public static ACPClient open(String apiUrl, String user, String password, ACPHTTPClient httpClient, Cache<ACPPrincipal> cache) throws ACPException {
+		ACPClient client = new ACPClient(apiUrl,httpClient,cache);
 		
 		client.login(user,password);
 		
@@ -125,12 +124,18 @@ public class ACPClient {
             
             PostMethod post = new PostMethod(apiUrl);
 			post.addRequestHeader("Content-Type","text/xml");
+                        if (isInSession())
+                            post.setRequestHeader("Cookie", "BREEZESESSION="+getSession());
 			post.setRequestBody(sw.toString());
 			int code = http.executeMethod(post);
 			if (code != 200)
 				throw new ACPException(post.getStatusLine().toString());
 			
 			Header cookieHeader = post.getResponseHeader("Set-Cookie");
+                        String sessionValue = CookieUtils.getCookieString(cookieHeader.getValue(),"BREEZESESSION");
+                        if (sessionValue != null)
+                        	setSession(sessionValue);
+                        /*
 			if (cookieHeader != null && cookieHeader.getValue() != null) {
 				String ch = cookieHeader.getValue();
 				int sp = ch.indexOf(";");
@@ -139,6 +144,7 @@ public class ACPClient {
 				System.err.println("Found session: "+s);
 				setSession(s);
 			}
+			*/
             
 			ACPResult r = ACPResult.parse(post.getResponseBodyAsStream());
 			log.info(r);
@@ -151,7 +157,6 @@ public class ACPClient {
 	
 	public ACPResult request(String action, Map<String, String> p) throws ACPException {
 		try {
-			
 			StringBuffer url = new StringBuffer();
 			url.append(apiUrl).append("?").append("action=").append(action);
 			if (isInSession()) {
@@ -159,29 +164,28 @@ public class ACPClient {
 			}
 			if (p != null && p.size() > 0) {
 				for (Map.Entry<String, String> e : p.entrySet()) {
-                    if (e.getValue() != null && e.getValue().length() > 0) {
+                    			if (e.getValue() != null && e.getValue().length() > 0) {
 					   url.append("&");
 					   url.append(e.getKey()).append("=").append(URLEncoder.encode(e.getValue(),"ISO-8859-1"));
-                    }
+                    			}
 				}
 			}
 			System.err.println("http="+http);
 			System.err.println("url="+url);
 			
 			HttpMethod get = new GetMethod(url.toString());
+                        if (isInSession())
+                            get.setRequestHeader("Cookie", "BREEZESESSION="+getSession());
 			int code = http.executeMethod(get);
 			if (code != 200)
 				throw new ACPException(get.getStatusLine().toString());
 			
 			Header cookieHeader = get.getResponseHeader("Set-Cookie");
-			if (cookieHeader != null && cookieHeader.getValue() != null) {
-				String ch = cookieHeader.getValue();
-				int sp = ch.indexOf(";");
-				int ep = ch.indexOf("=");
-				String s = ch.substring(ep+1, sp);
-				System.err.println("Found session: "+s);
-				setSession(s);
-			}
+                        if (cookieHeader != null) {
+                           String sessionValue = CookieUtils.getCookieString(cookieHeader.getValue(),"BREEZESESSION");
+                           if (sessionValue != null)
+                           	setSession(sessionValue);
+                        }
 			
 			ACPResult r = ACPResult.parse(get.getResponseBodyAsStream());
 			log.info(r);
@@ -227,25 +231,31 @@ public class ACPClient {
 	}
 	
 	public ACPPrincipal findBuiltIn(String type) throws ACPException {
-		Map<String, String> request = new HashMap<String, String>();
-		request.put("filter-type", type);
-		ACPResult userResult = request("principal-list", request);
-		ACPPrincipal principal = userResult.getPrincipal();
-		if (userResult.isError())
-			throw userResult.getException();
-		
+                ACPPrincipal principal = this.cache.get("builtin:"+type);
+                if (principal == null) {
+			Map<String, String> request = new HashMap<String, String>();
+			request.put("filter-type", type);
+			ACPResult userResult = request("principal-list", request);
+	   		principal = userResult.getPrincipal();
+			if (userResult.isError())
+				throw userResult.getException();
+                        this.cache.set("builtin:"+type, principal);
+                }
 		return principal;
 	}
 	
 	public ACPPrincipal findGroup(String name) throws ACPException {
-		Map<String, String> request = new HashMap<String, String>();
-		request.put("filter-name", name);
-		request.put("filter-type", "group");
-		ACPResult groupResult = request("principal-list", request);
-		ACPPrincipal principal = groupResult.getPrincipal();
-		if (groupResult.isError())
-			throw groupResult.getException();
-		
+                ACPPrincipal principal = this.cache.get("group:"+name);
+                if (principal == null) {
+			Map<String, String> request = new HashMap<String, String>();
+			request.put("filter-name", name);
+			request.put("filter-type", "group");
+			ACPResult groupResult = request("principal-list", request);
+			principal = groupResult.getPrincipal();
+			if (groupResult.isError())
+				throw groupResult.getException();
+                        this.cache.set("group:"+name, principal);
+                }
 		return principal;
 	}
 	

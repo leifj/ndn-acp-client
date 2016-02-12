@@ -19,8 +19,15 @@ import net.nordu.acp.client.ACPClient;
 import net.nordu.acp.client.ACPException;
 import net.nordu.acp.client.ACPPrincipal;
 import net.nordu.acp.client.http.ACPHTTPClient;
+import net.nordu.acp.utils.Cache;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 
 public class UserProvisionFilter implements Filter {
+
+        private Log log = LogFactory.getLog(UserProvisionFilter.class);
 
 	private Map<String, List<String>> headerMap;
 
@@ -29,6 +36,7 @@ public class UserProvisionFilter implements Filter {
 	}
 
 	private static final long DEFAULT_SESSION_TTL = 30;
+        private static final int DEFAULT_CACHE_TTL = 5*60;
 
 	public void destroy() {
 	}
@@ -128,26 +136,21 @@ public class UserProvisionFilter implements Filter {
 				System.err.println("in doFilter");
 
 				if (!uid.contains("@")) {
-					resp.sendRedirect("https://connect.sunet.se/errors/missing-attribute.php?attribute=eduPersonPrincipalName");
+					resp.sendRedirect("https://"+request.getServerName()+"/errors/missing-attribute.php?attribute=eduPersonPrincipalName");
 					return;
 				}
 
 				if (!hasProperty(req, "first-name")) {
-					resp.sendRedirect("https://connect.sunet.se/errors/missing-attribute.php?attribute=givenName");
+					resp.sendRedirect("https://"+request.getServerName()+"/errors/missing-attribute.php?attribute=givenName");
 					return;
 				}
 
 				if (!hasProperty(req, "last-name")) {
-					resp.sendRedirect("https://connect.sunet.se/errors/missing-attribute.php?attribute=sn");
+					resp.sendRedirect("https://"+request.getServerName()+"/errors/missing-attribute.php?attribute=sn");
 					return;
 				}
-				/*
-				 * if (!hasProperty(req,"email")) {resp.sendRedirect(
-				 * "https://connect.sunet.se/errors/missing-attribute.php?attribute=mail"
-				 * ); return; }
-				 */
 
-				client = ACPClient.open(apiUrl, user, password, httpClient);
+				client = ACPClient.open(apiUrl, user, password, httpClient, pCache);
 				
 				ACPPrincipal user = client.findOrCreatePrincipal("login", uid,
 						"user", new HashMap<String, String>() {
@@ -309,10 +312,22 @@ public class UserProvisionFilter implements Filter {
 	private String user;
 	private String password;
 	private ACPHTTPClient httpClient;
+        private Cache<ACPPrincipal> pCache;
 	
 	@SuppressWarnings("unchecked")
 	public void init(FilterConfig filterConfig) throws ServletException {
 		try {
+                        int cacheTtl = DEFAULT_CACHE_TTL;
+                        String cacheTtlStr = filterConfig.getInitParameter("acp.cache-ttl");
+                        if (cacheTtlStr != null) {
+                         	try {
+                             		Integer t = Integer.parseInt(cacheTtlStr);
+      					cacheTtl = t.intValue();
+                                } catch (NumberFormatException ex) {
+					ex.printStackTrace();
+                                }
+                        }
+                        pCache = new Cache<ACPPrincipal>(cacheTtl);
 			apiUrl = filterConfig.getInitParameter("acp.url");
 			user = filterConfig.getInitParameter("acp.user");
 			password = filterConfig.getInitParameter("acp.password");
